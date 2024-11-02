@@ -294,10 +294,10 @@ class RTPClient:
     def __init__(
         self,
         assoc: Dict[int, PayloadType],
-        inIP: str,
-        inPort: int,
-        outIP: str,
-        outPort: int,
+        in_ip: str,
+        in_port: int,
+        out_ip: str,
+        out_port: int,
         sendrecv: TransmitType,
         dtmf: Optional[Callable[[str], None]] = None,
     ):
@@ -319,10 +319,10 @@ class RTPClient:
             except Exception:
                 debug(f"{assoc[m]} cannot be selected as an audio codec")
 
-        self.inIP = inIP
-        self.inPort = inPort
-        self.outIP = outIP
-        self.outPort = outPort
+        self.in_ip = in_ip
+        self.in_port = in_port
+        self.out_ip = out_ip
+        self.out_port = out_port
 
         self.dtmf = dtmf
 
@@ -335,11 +335,13 @@ class RTPClient:
         self.outSSRC = random.randint(1000, 65530)
 
     def start(self) -> None:
+        print("Starting RTPClient")
         self.sin = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # Some systems just reply to the port they receive from instead of
         # listening to the SDP.
         self.sout = self.sin
-        self.sin.bind((self.inIP, self.inPort))
+        # self.sout = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sin.bind((self.in_ip, self.in_port))
         self.sin.setblocking(False)
 
         r = Timer(0, self.recv)
@@ -351,8 +353,18 @@ class RTPClient:
 
     def stop(self) -> None:
         self.NSD = False
-        self.sin.close()
-        self.sout.close()
+        try:
+            if hasattr(self, "sin"):
+                if self.sin:
+                    self.sin.close()
+        except Exception as e:
+            debug(str(e))
+        try:
+            if hasattr(self, "sout"):
+                if self.sout:
+                    self.sout.close()
+        except Exception as e:
+            debug(str(e))
 
     def read(self, length: int = 160, blocking: bool = True) -> bytes:
         if not blocking:
@@ -400,7 +412,7 @@ class RTPClient:
             # debug(payload)
 
             try:
-                self.sout.sendto(packet, (self.outIP, self.outPort))
+                self.sout.sendto(packet, (self.out_ip, self.out_port))
             except OSError:
                 warnings.warn(
                     "RTP Packet failed to send!",
@@ -423,15 +435,6 @@ class RTPClient:
         reduction = pyVoIP.TRANSMIT_DELAY_REDUCTION + 1
         return reduction if reduction else 1.0
 
-    def parsePacket(self, packet: bytes) -> None:
-        warnings.warn(
-            "parsePacket is deprecated due to PEP8 compliance. "
-            + "Use parse_packet instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.parse_packet(packet)
-
     def parse_packet(self, packet: bytes) -> None:
         msg = RTPMessage(packet, self.assoc)
         if msg.payload_type == PayloadType.PCMU:
@@ -445,90 +448,35 @@ class RTPClient:
                 "Unsupported codec (parse): " + str(msg.payload_type)
             )
 
-    def encodePacket(self, payload: bytes) -> bytes:
-        warnings.warn(
-            "encodePacket is deprecated due to PEP8 compliance. "
-            + "Use encode_packet instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.encode_packet(payload)
-
     def encode_packet(self, payload: bytes) -> bytes:
         if self.preference == PayloadType.PCMU:
             return self.encode_pcmu(payload)
         elif self.preference == PayloadType.PCMA:
-            return self.encode_pcmu(payload)
+            return self.encode_pcma(payload)
         else:
             raise RTPParseError(
                 "Unsupported codec (encode): " + str(self.preference)
             )
-
-    def parsePCMU(self, packet: RTPMessage) -> None:
-        warnings.warn(
-            "parsePCMU is deprecated due to PEP8 compliance. "
-            + "Use parse_pcmu instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.parse_pcmu(packet)
 
     def parse_pcmu(self, packet: RTPMessage) -> None:
         data = audioop.ulaw2lin(packet.payload, 1)
         data = audioop.bias(data, 1, 128)
         self.pmin.write(packet.timestamp, data)
 
-    def encodePCMU(self, packet: bytes) -> bytes:
-        warnings.warn(
-            "encodePCMU is deprecated due to PEP8 compliance. "
-            + "Use encode_pcmu instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.encode_pcmu(packet)
-
     def encode_pcmu(self, packet: bytes) -> bytes:
         packet = audioop.bias(packet, 1, -128)
         packet = audioop.lin2ulaw(packet, 1)
         return packet
-
-    def parsePCMA(self, packet: RTPMessage) -> None:
-        warnings.warn(
-            "parsePCMA is deprecated due to PEP8 compliance. "
-            + "Use parse_pcma instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.parse_pcma(packet)
 
     def parse_pcma(self, packet: RTPMessage) -> None:
         data = audioop.alaw2lin(packet.payload, 1)
         data = audioop.bias(data, 1, 128)
         self.pmin.write(packet.timestamp, data)
 
-    def encodePCMA(self, packet: bytes) -> bytes:
-        warnings.warn(
-            "encodePCMA is deprecated due to PEP8 compliance. "
-            + "Use encode_pcma instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.encode_pcma(packet)
-
     def encode_pcma(self, packet: bytes) -> bytes:
         packet = audioop.bias(packet, 1, -128)
         packet = audioop.lin2alaw(packet, 1)
         return packet
-
-    def parseTelephoneEvent(self, packet: RTPMessage) -> None:
-        warnings.warn(
-            "parseTelephoneEvent "
-            + "is deprecated due to PEP8 compliance. "
-            + "Use parse_telephone_event instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.parse_telephone_event(packet)
 
     def parse_telephone_event(self, packet: RTPMessage) -> None:
         key = [
