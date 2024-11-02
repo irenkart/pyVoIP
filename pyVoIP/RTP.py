@@ -335,10 +335,12 @@ class RTPClient:
         self.outSSRC = random.randint(1000, 65530)
 
     def start(self) -> None:
+        print("Starting RTPClient")
         self.sin = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         # Some systems just reply to the port they receive from instead of
         # listening to the SDP.
-        self.sout = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sout = self.sin
+        # self.sout = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sin.bind((self.in_ip, self.in_port))
         self.sin.setblocking(False)
 
@@ -351,12 +353,18 @@ class RTPClient:
 
     def stop(self) -> None:
         self.NSD = False
-        if hasattr(self, "sin"):
-            if self.sin:
-                self.sin.close()
-        if hasattr(self, "sout"):
-            if self.sout:
-                self.sout.close()
+        try:
+            if hasattr(self, "sin"):
+                if self.sin:
+                    self.sin.close()
+        except Exception as e:
+            debug(str(e))
+        try:
+            if hasattr(self, "sout"):
+                if self.sout:
+                    self.sout.close()
+        except Exception as e:
+            debug(str(e))
 
     def read(self, length: int = 160, blocking: bool = True) -> bytes:
         if not blocking:
