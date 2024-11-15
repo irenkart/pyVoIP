@@ -1029,14 +1029,14 @@ class SIPClient:
         to = request.headers["To"]
         if request.headers["From"]["tag"] == tag:
             byeRequest += self.__gen_from_to_via_request(request, "From", tag)
-            byeRequest += f"To: {to['raw']}\r\n"
+            byeRequest += f"To: {to['raw']};tag={to['tag']}\r\n"
         else:
             byeRequest += f"To: {_from['raw']}\r\n"
             byeRequest += self.__gen_from_to_via_request(
                 request, "To", tag, dsthdr="From"
             )
         byeRequest += f"Call-ID: {request.headers['Call-ID']}\r\n"
-        cseq = request.headers["CSeq"]["check"]
+        cseq = request.headers["CSeq"]["check"] + 1
         byeRequest += f"CSeq: {cseq} {cmd}\r\n"
         byeRequest += "Max-Forwards: 70\r\n"
         method = "sips" if self.transport_mode is TransportMode.TLS else "sip"
