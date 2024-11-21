@@ -49,7 +49,7 @@ class VoIPPhoneParameter:
 
 
 class VoIPPhone:
-    def __init__(self, voip_phone_parameter: VoIPPhoneParameter):
+    def __init__(self, voip_phone_parameter: VoIPPhoneParameter, send_number_to_call=False):
         self.voip_phone_parameter = voip_phone_parameter
         if (
             self.voip_phone_parameter.rtp_port_low
@@ -101,6 +101,7 @@ class VoIPPhone:
             fatal_callback=self.fatal,
             transport_mode=self.voip_phone_parameter.transport_mode,
         )
+        self.send_number_to_call = send_number_to_call
 
     def callback(
         self, conn: VoIPConnection, request: SIPMessage
@@ -339,16 +340,30 @@ class VoIPPhone:
         request, call_id, sess_id, conn = self.sip.invite(
             number, medias, RTP.TransmitType.SENDRECV
         )
-        self.calls[call_id] = self.call_class(
-            self,
-            CallState.DIALING,
-            request,
-            sess_id,
-            self.voip_phone_parameter.bind_ip,
-            ms=medias,
-            sendmode=self.sendmode,
-            conn=conn,
-        )
+        if self.send_number_to_call:
+            self.calls[call_id] = self.call_class(
+                self,
+                CallState.DIALING,
+                request,
+                sess_id,
+                self.voip_phone_parameter.bind_ip,
+                ms=medias,
+                sendmode=self.sendmode,
+                conn=conn,
+                number=number,
+            )
+        else:
+            self.calls[call_id] = self.call_class(
+                self,
+                CallState.DIALING,
+                request,
+                sess_id,
+                self.voip_phone_parameter.bind_ip,
+                ms=medias,
+                sendmode=self.sendmode,
+                conn=conn,
+            )
+
 
         return self.calls[call_id]
 
