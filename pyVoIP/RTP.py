@@ -382,7 +382,8 @@ class RTPClient:
         while self.NSD:
             try:
                 packet = self.sin.recv(8192)
-                self.parse_packet(packet)
+                if len(packet) > 0 and packet[:1] == b'\x80':
+                    self.parse_packet(packet)
             except BlockingIOError:
                 time.sleep(0.01)
             except RTPParseError as e:
