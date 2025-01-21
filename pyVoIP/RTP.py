@@ -459,7 +459,7 @@ class RTPClient:
             )
 
     def parse_pcmu(self, packet: RTPMessage) -> None:
-        self.pmin.write(packet.timestamp, packet)
+        self.pmin.write(packet.timestamp, packet.payload)
 
     def encode_pcmu(self, packet: bytes) -> bytes:
         packet = audioop.bias(packet, 1, -128)
